@@ -33,7 +33,7 @@
     "@maxmind/geoip2-node": "6.1.0",
     "@mongodb-js/zstd": "^2.0.1",
     "@react-email/components": "1.0.1",
-    "@react-email/tailwind": "2.0.1",
+    "@react-email/tailwind": "2.0.3",
     "@rybbit/shared": "file:../shared",
     "better-auth": "1.3.27",
     "bullmq": "^5.56.5",

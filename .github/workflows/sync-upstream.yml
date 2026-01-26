@@ -1,0 +1,102 @@
+name: Sync Upstream Releases
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [upstream-release]
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Get current version
+        id: current
+        run: |
+          VERSION=$(grep 'version = "' package/default.nix | head -1 | sed 's/.*version = "\([^"]*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get latest upstream release
+        id: upstream
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/rybbit-io/rybbit/releases/latest | jq -r '.tag_name')
+          VERSION=${LATEST#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$LATEST" >> $GITHUB_OUTPUT
+
+      - name: Check if update needed
+        id: check
+        run: |
+          if [ "${{ steps.current.outputs.version }}" = "${{ steps.upstream.outputs.version }}" ]; then
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+            echo "Already up to date: v${{ steps.current.outputs.version }}"
+          else
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "Update available: v${{ steps.current.outputs.version }} -> v${{ steps.upstream.outputs.version }}"
+          fi
+
+      - name: Run update script
+        if: steps.check.outputs.needs_update == 'true'
+        run: nix run .#update
+
+      - name: Verify build
+        if: steps.check.outputs.needs_update == 'true'
+        run: nix build --no-link
+
+      - name: Commit and tag
+        if: steps.check.outputs.needs_update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: update to ${{ steps.upstream.outputs.tag }}"
+          git tag "${{ steps.upstream.outputs.tag }}-nix"
+          git push
+          git push --tags
+
+      - name: Create release
+        if: steps.check.outputs.needs_update == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.upstream.outputs.tag }}-nix
+          name: Rybbit ${{ steps.upstream.outputs.version }} (Nix)
+          body: |
+            Nix packaging for [Rybbit ${{ steps.upstream.outputs.tag }}](https://github.com/rybbit-io/rybbit/releases/tag/${{ steps.upstream.outputs.tag }})
+
+            ## Usage
+
+            ```nix
+            {
+              inputs.rybbit.url = "github:dtgagnon/rybbix/${{ steps.upstream.outputs.tag }}-nix";
+
+              outputs = { self, nixpkgs, rybbit, ... }: {
+                nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+                  modules = [
+                    rybbit.nixosModules.default
+                    {
+                      services.rybbit = {
+                        enable = true;
+                        domain = "analytics.example.com";
+                        secretsFile = "/run/secrets/rybbit";
+                      };
+                    }
+                  ];
+                };
+              };
+            }
+            ```
+          draft: false
+          prerelease: false

@@ -34,7 +34,7 @@
 
       overlays = {
         default = self.overlays.rybbit;
-        rybbit = final: prev: {
+        rybbit = _final: prev: {
           rybbit = prev.callPackage ./package { };
         };
       };

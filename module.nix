@@ -12,7 +12,6 @@ let
     mkMerge
     mkPackageOption
     types
-    optionalString
     ;
   cfg = config.services.rybbit;
 

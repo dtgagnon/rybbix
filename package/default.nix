@@ -24,7 +24,7 @@ let
   # npm dependency hashes - updated by GitHub Actions
   sharedHash = "sha256-AtGuK17i1yH4QFl/D7svtnQjHvxV81FKxFsZ9CWUbvo=";
   clientHash = "sha256-hZ42myygvJtYwOPVEst3ukso1nk75ooqyeOxaa4CL1k=";
-  serverHash = "sha256-Gn2MZMy/FOvofG0hrog05mitcoIMb0HmVy81tqnOg1c=";
+  serverHash = "sha256-xl2j7TRWXo2Uy4S0aL8/g9DFcdrUdhJ2JwclRQQvusE=";
 
   # Fetch source from GitHub
   src = fetchFromGitHub {

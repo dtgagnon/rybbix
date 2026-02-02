@@ -15,23 +15,13 @@ let
     ;
   cfg = config.services.rybbit;
 
-  # ClickHouse XML config snippets
-  clickhouseNetworkConfig = ''
+  # ClickHouse XML config - must be single root element
+  clickhouseServerConfig = ''
     <clickhouse>
       <listen_host>0.0.0.0</listen_host>
-    </clickhouse>
-  '';
-
-  clickhouseJsonConfig = ''
-    <clickhouse>
       <settings>
         <enable_json_type>1</enable_json_type>
       </settings>
-    </clickhouse>
-  '';
-
-  clickhouseLoggingConfig = ''
-    <clickhouse>
       <logger>
         <level>warning</level>
         <console>true</console>
@@ -49,7 +39,7 @@ let
     </clickhouse>
   '';
 
-  clickhouseUserLoggingConfig = ''
+  clickhouseUsersConfig = ''
     <clickhouse>
       <profiles>
         <default>
@@ -282,9 +272,8 @@ in
     (mkIf cfg.clickhouse.enable {
       services.clickhouse = {
         enable = true;
-        extraServerConfig =
-          clickhouseNetworkConfig + clickhouseJsonConfig + clickhouseLoggingConfig;
-        extraUsersConfig = clickhouseUserLoggingConfig;
+        extraServerConfig = clickhouseServerConfig;
+        extraUsersConfig = clickhouseUsersConfig;
       };
     })
 

@@ -160,6 +160,14 @@ let
       runHook postBuild
     '';
 
+    postBuild = ''
+      # Patch hardcoded server bind to read from PORT/HOST env vars
+      substituteInPlace dist/index.js \
+        --replace-fail \
+          'await server.listen({ port: 3001, host: "0.0.0.0" })' \
+          'await server.listen({ port: parseInt(process.env.PORT || "3001"), host: process.env.HOST || "0.0.0.0" })'
+    '';
+
     installPhase = ''
       runHook preInstall
 
@@ -175,8 +183,8 @@ let
 
       makeWrapper ${nodejs_20}/bin/node $out/bin/rybbit-server \
         --add-flags "$out/lib/rybbit-server/dist/index.js" \
-        --set PUPPETEER_EXECUTABLE_PATH "${chromium}/bin/chromium" \
-        --set PUPPETEER_SKIP_CHROMIUM_DOWNLOAD "1" \
+        --set-default PUPPETEER_EXECUTABLE_PATH "${chromium}/bin/chromium" \
+        --set-default PUPPETEER_SKIP_CHROMIUM_DOWNLOAD "1" \
         --prefix PATH : "${lib.makeBinPath [ postgresql ]}"
 
       runHook postInstall
@@ -211,11 +219,11 @@ in
     # Copy server
     cp -r ${server}/lib/* $out/lib/
 
-    # Create server wrapper
+    # Create server wrapper (use --set-default so module environment takes precedence)
     makeWrapper ${nodejs_20}/bin/node $out/bin/rybbit-server \
       --add-flags "$out/lib/rybbit-server/dist/index.js" \
-      --set PUPPETEER_EXECUTABLE_PATH "${chromium}/bin/chromium" \
-      --set PUPPETEER_SKIP_CHROMIUM_DOWNLOAD "1" \
+      --set-default PUPPETEER_EXECUTABLE_PATH "${chromium}/bin/chromium" \
+      --set-default PUPPETEER_SKIP_CHROMIUM_DOWNLOAD "1" \
       --prefix PATH : "${lib.makeBinPath [ postgresql ]}"
 
     # Create client wrapper (use --set-default so module environment takes precedence)

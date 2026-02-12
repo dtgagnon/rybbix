@@ -203,8 +203,11 @@ in
 
       host = mkOption {
         type = types.str;
-        default = "127.0.0.1";
-        description = "PostgreSQL host";
+        default = "/run/postgresql";
+        description = ''
+          PostgreSQL host. Use a directory path (e.g. /run/postgresql) for
+          Unix socket connections with peer auth, or an IP address for TCP.
+        '';
       };
 
       port = mkOption {
@@ -242,7 +245,8 @@ in
       description = ''
         Path to a file containing environment variables for secrets.
         Should contain at minimum: BETTER_AUTH_SECRET
-        Can also contain: CLICKHOUSE_PASSWORD, POSTGRES_PASSWORD, MAPBOX_TOKEN
+        Optional: CLICKHOUSE_PASSWORD, MAPBOX_TOKEN
+        Only needed if using TCP postgres: POSTGRES_PASSWORD
         Recommended to use with sops-nix.
       '';
     };
@@ -358,7 +362,8 @@ in
             ensureDBOwnership = true;
           }
         ];
-        # Use peer auth for local connections, password for TCP
+      } // lib.optionalAttrs (! lib.hasPrefix "/" cfg.postgres.host) {
+        # TCP auth - only needed when postgres.host is an IP, not a socket path
         authentication = lib.mkAfter ''
           host ${cfg.postgres.database} ${cfg.postgres.user} 127.0.0.1/32 scram-sha-256
           host ${cfg.postgres.database} ${cfg.postgres.user} ::1/128 scram-sha-256
@@ -408,6 +413,8 @@ in
 
         environment = {
           NODE_ENV = "production";
+          PORT = toString cfg.server.port;
+          HOST = cfg.server.host;
           CLICKHOUSE_HOST = cfg.clickhouse.host;
           CLICKHOUSE_DB = cfg.clickhouse.database;
           POSTGRES_HOST = cfg.postgres.host;

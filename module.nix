@@ -15,6 +15,45 @@ let
     ;
   cfg = config.services.rybbit;
 
+  # GeoLite2 database for IP geolocation
+  geoDbDir = "${cfg.dataDir}/geolite2";
+  geoCityPath = "${geoDbDir}/GeoLite2-City.mmdb";
+  geoCityEtag = "${geoDbDir}/city.etag";
+  geoCityUrl = "https://raw.githubusercontent.com/P3TERX/GeoLite.mmdb/download/GeoLite2-City.mmdb";
+
+  geoUpdateScript = pkgs.writeShellScript "rybbit-geolite2-update" ''
+    set -euo pipefail
+
+    mkdir -p "${geoDbDir}"
+    cd "${geoDbDir}"
+
+    TMPFILE=$(mktemp)
+    HTTP_CODE=$(${pkgs.curl}/bin/curl -sSL \
+      --etag-compare "${geoCityEtag}" \
+      --etag-save "${geoCityEtag}.new" \
+      -o "$TMPFILE" \
+      -w "%{http_code}" \
+      "${geoCityUrl}")
+
+    if [ "$HTTP_CODE" = "200" ]; then
+      mv "$TMPFILE" "${geoCityPath}"
+      mv "${geoCityEtag}.new" "${geoCityEtag}"
+      chown ${cfg.user}:${cfg.group} "${geoCityPath}"
+      chmod 0644 "${geoCityPath}"
+      echo "GeoLite2-City updated"
+    elif [ "$HTTP_CODE" = "304" ]; then
+      rm -f "$TMPFILE" "${geoCityEtag}.new"
+      echo "GeoLite2-City is up-to-date"
+    else
+      rm -f "$TMPFILE" "${geoCityEtag}.new"
+      echo "Failed to check GeoLite2-City: HTTP $HTTP_CODE" >&2
+      exit 1
+    fi
+
+    # Symlink into data dir so server finds it at process.cwd()
+    ln -sf "${geoCityPath}" "${cfg.dataDir}/GeoLite2-City.mmdb"
+  '';
+
   # ClickHouse XML config - must be single root element
   clickhouseServerConfig = ''
     <clickhouse>
@@ -228,6 +267,21 @@ in
       };
     };
 
+    geolocation = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = "Whether to download and manage the GeoLite2-City database for IP geolocation";
+      };
+
+      updateInterval = mkOption {
+        type = types.str;
+        default = "weekly";
+        description = "How often to check for GeoLite2 database updates (systemd calendar format)";
+        example = "daily";
+      };
+    };
+
     openFirewall = mkOption {
       type = types.bool;
       default = false;
@@ -275,6 +329,22 @@ in
         extraServerConfig = clickhouseServerConfig;
         extraUsersConfig = clickhouseUsersConfig;
       };
+
+      # Create the ClickHouse database before rybbit-server starts
+      systemd.services.rybbit-clickhouse-init = {
+        description = "Initialize ClickHouse database for Rybbit";
+        after = [ "clickhouse.service" ];
+        requires = [ "clickhouse.service" ];
+
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          ExecStart = pkgs.writeShellScript "rybbit-clickhouse-init" ''
+            ${pkgs.clickhouse}/bin/clickhouse-client \
+              --query "CREATE DATABASE IF NOT EXISTS ${cfg.clickhouse.database}"
+          '';
+        };
+      };
     })
 
     # PostgreSQL configuration
@@ -296,17 +366,44 @@ in
       };
     })
 
+    # GeoLite2 database management
+    (mkIf cfg.geolocation.enable {
+      systemd.services.rybbit-geolite2-update = {
+        description = "Update GeoLite2 City database for Rybbit geolocation";
+        after = [ "network-online.target" ];
+        wants = [ "network-online.target" ];
+
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = geoUpdateScript;
+        };
+      };
+
+      systemd.timers.rybbit-geolite2-update = {
+        description = "Periodic GeoLite2-City database update for Rybbit";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = cfg.geolocation.updateInterval;
+          Persistent = true;
+          RandomizedDelaySec = "1h";
+        };
+      };
+    })
+
     # Rybbit Server (Backend API)
     {
       systemd.services.rybbit-server = {
         description = "Rybbit Analytics Backend Server";
         wantedBy = [ "multi-user.target" ];
-        after =
-          [ "network.target" ]
-          ++ lib.optional cfg.clickhouse.enable "clickhouse.service"
-          ++ lib.optional cfg.postgres.enable "postgresql.service";
+        after = [
+          "network.target"
+        ]
+        ++ lib.optional cfg.clickhouse.enable "rybbit-clickhouse-init.service"
+        ++ lib.optional cfg.postgres.enable "postgresql.service"
+        ++ lib.optional cfg.geolocation.enable "rybbit-geolite2-update.service";
+        wants = lib.optional cfg.geolocation.enable "rybbit-geolite2-update.service";
         requires =
-          lib.optional cfg.clickhouse.enable "clickhouse.service"
+          lib.optional cfg.clickhouse.enable "rybbit-clickhouse-init.service"
           ++ lib.optional cfg.postgres.enable "postgresql.service";
 
         environment = {
@@ -320,7 +417,8 @@ in
           BASE_URL = cfg.baseUrl;
           DISABLE_SIGNUP = lib.boolToString cfg.settings.disableSignup;
           DISABLE_TELEMETRY = lib.boolToString cfg.settings.disableTelemetry;
-        } // lib.optionalAttrs (cfg.settings.mapboxToken != null) {
+        }
+        // lib.optionalAttrs (cfg.settings.mapboxToken != null) {
           MAPBOX_TOKEN = cfg.settings.mapboxToken;
         };
 
@@ -351,7 +449,10 @@ in
       systemd.services.rybbit-client = {
         description = "Rybbit Analytics Client (Next.js)";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network.target" "rybbit-server.service" ];
+        after = [
+          "network.target"
+          "rybbit-server.service"
+        ];
         requires = [ "rybbit-server.service" ];
 
         environment = {
@@ -409,10 +510,11 @@ in
 
     # Firewall configuration
     (mkIf cfg.openFirewall {
-      networking.firewall.allowedTCPPorts =
-        [ cfg.client.port ]
-        ++ lib.optional cfg.nginx.enable 80
-        ++ lib.optional cfg.nginx.enable 443;
+      networking.firewall.allowedTCPPorts = [
+        cfg.client.port
+      ]
+      ++ lib.optional cfg.nginx.enable 80
+      ++ lib.optional cfg.nginx.enable 443;
     })
   ]);
 }

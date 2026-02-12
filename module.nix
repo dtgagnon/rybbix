@@ -461,6 +461,7 @@ in
           POSTGRES_DB = cfg.postgres.database;
           POSTGRES_USER = cfg.postgres.user;
           BASE_URL = cfg.baseUrl;
+          BETTER_AUTH_URL = cfg.baseUrl;
           DISABLE_SIGNUP = lib.boolToString cfg.settings.disableSignup;
           DISABLE_TELEMETRY = lib.boolToString cfg.settings.disableTelemetry;
         }

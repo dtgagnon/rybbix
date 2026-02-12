@@ -1,49 +1,55 @@
-Use request.nextUrl instead of request.url for middleware redirects.
+Read X-Forwarded-Host/Proto headers for correct redirect URLs behind proxy.
 
-request.url contains the raw HTTP URL (e.g. http://localhost:3052/...)
-which breaks when behind a reverse proxy. request.nextUrl respects
-X-Forwarded-Host/Proto headers so redirects use the correct public domain.
+In Next.js standalone mode, both request.url and request.nextUrl use the
+local listen address (e.g. http://localhost:3052) rather than the public
+domain. This adds a helper that reads X-Forwarded-Host (or Host) and
+X-Forwarded-Proto headers so redirects resolve to the correct origin
+when running behind a reverse proxy like Pangolin/Traefik.
 
 --- a/src/middleware.ts
 +++ b/src/middleware.ts
-@@ -12,9 +12,10 @@
+@@ -1,6 +1,19 @@
+ import { NextResponse } from "next/server";
+ import type { NextRequest } from "next/server";
 
++/**
++ * Build a redirect URL that respects reverse-proxy headers.
++ * In standalone mode request.url uses the local listen address;
++ * this reads X-Forwarded-Host / Host so the browser sees the public domain.
++ */
++function proxyRedirectUrl(request: NextRequest, pathname: string): URL {
++  const host =
++    request.headers.get("x-forwarded-host") || request.headers.get("host");
++  const proto = request.headers.get("x-forwarded-proto") || "https";
++  if (host) return new URL(pathname, `${proto}://${host}`);
++  return new URL(pathname, request.url);
++}
++
+ export async function middleware(request: NextRequest) {
+   const url = request.nextUrl.clone();
+   const path = url.pathname;
+@@ -13,7 +26,7 @@
    // Handle GitHub OAuth callback redirect
    if (path.includes("/auth/callback/github") || path.includes("/auth/callback/google")) {
 -    const redirectUrl = new URL(`/api${path}${request.nextUrl.search}`, request.url);
--    const response = NextResponse.redirect(redirectUrl);
--    response.headers.set("Cache-Control", "no-store, max-age=0");
-+    const oauthUrl = request.nextUrl.clone();
-+    oauthUrl.pathname = `/api${path}`;
-+    const response = NextResponse.redirect(oauthUrl);
-+    response.headers.set("Cache-Control", "no-store, max-age=0");
++    const redirectUrl = proxyRedirectUrl(request, `/api${path}${request.nextUrl.search}`);
+     const response = NextResponse.redirect(redirectUrl);
+     response.headers.set("Cache-Control", "no-store, max-age=0");
      return response;
    }
-
-@@ -48,8 +49,10 @@
-     }
-
+@@ -50,5 +63,5 @@
      // Add cache control headers to make sure the redirect isn't cached
 -    const response = NextResponse.redirect(new URL(`/${siteId}/main`, request.url));
--    response.headers.set("Cache-Control", "no-store, max-age=0");
-+    const siteUrl = request.nextUrl.clone();
-+    siteUrl.pathname = `/${siteId}/main`;
-+    const response = NextResponse.redirect(siteUrl);
-+    response.headers.set("Cache-Control", "no-store, max-age=0");
++    const response = NextResponse.redirect(proxyRedirectUrl(request, `/${siteId}/main`));
+     response.headers.set("Cache-Control", "no-store, max-age=0");
      return response;
    }
-
-@@ -60,9 +63,10 @@
-   if (privateKeyMatch) {
+@@ -61,7 +74,6 @@
      const siteAndKey = privateKeyMatch[1]; // e.g., "123/abc123def456"
 
 -    // Redirect to /main while preserving the private key in the path
 -    const response = NextResponse.redirect(new URL(`/${siteAndKey}/main`, request.url));
--    response.headers.set("Cache-Control", "no-store, max-age=0");
-+    const pkUrl = request.nextUrl.clone();
-+    pkUrl.pathname = `/${siteAndKey}/main`;
-+    const response = NextResponse.redirect(pkUrl);
-+    response.headers.set("Cache-Control", "no-store, max-age=0");
++    const response = NextResponse.redirect(proxyRedirectUrl(request, `/${siteAndKey}/main`));
+     response.headers.set("Cache-Control", "no-store, max-age=0");
      return response;
    }
-

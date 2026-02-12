@@ -4,8 +4,8 @@ request.url contains the raw HTTP URL (e.g. http://localhost:3052/...)
 which breaks when behind a reverse proxy. request.nextUrl respects
 X-Forwarded-Host/Proto headers so redirects use the correct public domain.
 
---- a/client/src/middleware.ts
-+++ b/client/src/middleware.ts
+--- a/src/middleware.ts
++++ b/src/middleware.ts
 @@ -12,9 +12,10 @@
 
    // Handle GitHub OAuth callback redirect

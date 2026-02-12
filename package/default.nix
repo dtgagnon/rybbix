@@ -219,8 +219,10 @@ in
       --prefix PATH : "${lib.makeBinPath [ postgresql ]}"
 
     # Create client wrapper (use --set-default so module environment takes precedence)
+    # --chdir ensures Next.js finds .next/ relative to server.js
     makeWrapper ${nodejs_20}/bin/node $out/bin/rybbit-client \
       --add-flags "$out/lib/client/server.js" \
+      --chdir "$out/lib/client" \
       --set-default PORT "3002" \
       --set-default HOSTNAME "0.0.0.0"
   '';

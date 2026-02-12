@@ -89,6 +89,30 @@ let
       </profiles>
     </clickhouse>
   '';
+
+  # Drizzle config for postgres schema migration
+  drizzleConfig = pkgs.writeText "rybbit-drizzle.mjs" ''
+    import { defineConfig } from "drizzle-kit";
+    export default defineConfig({
+      dialect: "postgresql",
+      schema: "${cfg.package}/lib/rybbit-server/dist/db/postgres/schema.js",
+      dbCredentials: {
+        host: "${cfg.postgres.host}",
+        port: ${toString cfg.postgres.port},
+        database: "${cfg.postgres.database}",
+        user: "${cfg.postgres.user}",
+        ssl: false,
+      },
+    });
+  '';
+
+  postgresMigrateScript = pkgs.writeShellScript "rybbit-postgres-migrate" ''
+    set -euo pipefail
+    cd ${cfg.package}/lib/rybbit-server
+    export NODE_PATH=${cfg.package}/lib/rybbit-server/node_modules
+    ${pkgs.nodejs_20}/bin/node ./node_modules/.bin/drizzle-kit push \
+      --config ${drizzleConfig}
+  '';
 in
 {
   options.services.rybbit = {
@@ -369,6 +393,21 @@ in
           host ${cfg.postgres.database} ${cfg.postgres.user} ::1/128 scram-sha-256
         '';
       };
+
+      # Push drizzle schema to postgres before server starts
+      systemd.services.rybbit-postgres-migrate = {
+        description = "Push Rybbit database schema to PostgreSQL";
+        after = [ "postgresql.service" ];
+        requires = [ "postgresql.service" ];
+
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          User = cfg.user;
+          Group = cfg.group;
+          ExecStart = postgresMigrateScript;
+        };
+      };
     })
 
     # GeoLite2 database management
@@ -404,12 +443,12 @@ in
           "network.target"
         ]
         ++ lib.optional cfg.clickhouse.enable "rybbit-clickhouse-init.service"
-        ++ lib.optional cfg.postgres.enable "postgresql.service"
+        ++ lib.optional cfg.postgres.enable "rybbit-postgres-migrate.service"
         ++ lib.optional cfg.geolocation.enable "rybbit-geolite2-update.service";
         wants = lib.optional cfg.geolocation.enable "rybbit-geolite2-update.service";
         requires =
           lib.optional cfg.clickhouse.enable "rybbit-clickhouse-init.service"
-          ++ lib.optional cfg.postgres.enable "postgresql.service";
+          ++ lib.optional cfg.postgres.enable "rybbit-postgres-migrate.service";
 
         environment = {
           NODE_ENV = "production";

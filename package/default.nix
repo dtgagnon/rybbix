@@ -100,7 +100,8 @@ let
     installPhase = ''
       runHook preInstall
       mkdir -p $out
-      cp -r .next/standalone/* $out/
+      # Use /. instead of /* to include hidden dirs (.next from standalone)
+      cp -r .next/standalone/. $out/
       cp -r .next/static $out/.next/
       cp -r public $out/ 2>/dev/null || true
       runHook postInstall
@@ -165,7 +166,10 @@ let
       substituteInPlace dist/index.js \
         --replace-fail \
           'await server.listen({ port: 3001, host: "0.0.0.0" })' \
-          'await server.listen({ port: parseInt(process.env.PORT || "3001"), host: process.env.HOST || "0.0.0.0" })'
+          'await server.listen({ port: parseInt(process.env.PORT || "3001"), host: process.env.HOST || "0.0.0.0" })' \
+        --replace-fail \
+          'server.log.info("Server is listening on http://0.0.0.0:3001")' \
+          'server.log.info("Server is listening on http://" + (process.env.HOST || "0.0.0.0") + ":" + (process.env.PORT || "3001"))'
     '';
 
     installPhase = ''

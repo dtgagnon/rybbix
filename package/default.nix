@@ -218,10 +218,10 @@ in
       --set PUPPETEER_SKIP_CHROMIUM_DOWNLOAD "1" \
       --prefix PATH : "${lib.makeBinPath [ postgresql ]}"
 
-    # Create client wrapper
+    # Create client wrapper (use --set-default so module environment takes precedence)
     makeWrapper ${nodejs_20}/bin/node $out/bin/rybbit-client \
       --add-flags "$out/lib/client/server.js" \
-      --set PORT "3002" \
-      --set HOSTNAME "0.0.0.0"
+      --set-default PORT "3002" \
+      --set-default HOSTNAME "0.0.0.0"
   '';
 }

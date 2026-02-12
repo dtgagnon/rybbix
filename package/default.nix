@@ -93,6 +93,9 @@ let
     buildPhase = ''
       runHook preBuild
       export NODE_ENV=production
+      # Use empty string so the client builds with relative URLs (/api/...)
+      # The reverse proxy (nginx, Pangolin, etc.) routes /api to the backend.
+      export NEXT_PUBLIC_BACKEND_URL=""
       npm run build
       runHook postBuild
     '';

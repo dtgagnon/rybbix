@@ -70,7 +70,10 @@ let
 
     sourceRoot = "${src.name}/client";
 
-    patches = [ ./patches/use-local-fonts.patch ];
+    patches = [
+      ./patches/use-local-fonts.patch
+      ./patches/fix-middleware-redirects.patch
+    ];
 
     npmDepsHash = clientHash;
     nodejs = nodejs_20;

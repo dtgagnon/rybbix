@@ -136,11 +136,20 @@ let
     makeCacheWritable = true;
     dontUseCmakeConfigure = true;
 
-    # Use pre-built shared package
+    # Use pre-built shared package and rebuild native addons
     preBuild = ''
       chmod -R u+w ../shared
       rm -rf ../shared/dist
       cp -r ${shared}/dist ../shared/
+
+      # Build @mongodb-js/zstd native addon (skipped by --ignore-scripts during npm install)
+      chmod -R u+w node_modules/@mongodb-js/zstd
+      pushd node_modules/@mongodb-js/zstd
+      substituteInPlace binding.gyp \
+        --replace-fail "'<(module_root_dir)/deps/zstd/out/lib/libzstd.a'" "'-lzstd'" \
+        --replace-fail '"<(module_root_dir)/deps/zstd/lib"' '"${zstd.dev}/include"'
+      HOME=$TMPDIR node ${nodejs_20}/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js rebuild
+      popd
     '';
 
     buildPhase = ''

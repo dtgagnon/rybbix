@@ -185,6 +185,7 @@ let
       cp -r dist $out/lib/rybbit-server/
       cp -r node_modules $out/lib/rybbit-server/
       cp package.json $out/lib/rybbit-server/
+      cp -r public $out/lib/rybbit-server/
 
       # Copy shared package and fix symlink
       cp -r ${shared}/* $out/lib/shared/

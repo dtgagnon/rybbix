@@ -17,14 +17,14 @@
 
 let
   # Version info - updated by GitHub Actions on new releases
-  version = "2.4.0";
-  rev = "ac5b3a3343252e2bd48d7ac5345266287cd39980";
-  hash = "sha256-ZwdQ4pz9CUajD/G+MEXPhRzpwkOWJ1rJLHKD6APOw0w=";
+  version = "2.5.0";
+  rev = "a70705e9df7a36965906caa0eec39857600dac59";
+  hash = "sha256-bEvLZt69rQo02RFU3zWYxliQkdW949W8U9qUR5hogUY=";
 
   # npm dependency hashes - updated by GitHub Actions
   sharedHash = "sha256-AtGuK17i1yH4QFl/D7svtnQjHvxV81FKxFsZ9CWUbvo=";
-  clientHash = "sha256-aFFBmvSAcTHG9IoVQpiBqXfn1K4k8Na/KW+6PNWPgSg=";
-  serverHash = "sha256-QSjq+xITDXDSxhdNDQwLju3vxtKujbihnSgrAHk8yKc=";
+  clientHash = "sha256-FL9mzuUNYkcvJPMqwVuZtgM47IHylp6ZyM6j2XIbYaY=";
+  serverHash = "sha256-cqe3HwozFhulweKicvM7fUf5hrEEABIyGj9ydiJsWSQ=";
 
   # Fetch source from GitHub
   src = fetchFromGitHub {
@@ -36,7 +36,7 @@ let
   # Shared types package
   shared = buildNpmPackage {
     pname = "rybbit-shared";
-    version = "2.4.0";
+    version = "2.5.0";
 
     inherit src;
     sourceRoot = "${src.name}/shared";
@@ -174,8 +174,8 @@ let
           'await server.listen({ port: 3001, host: "0.0.0.0" })' \
           'await server.listen({ port: parseInt(process.env.PORT || "3001"), host: process.env.HOST || "0.0.0.0" })' \
         --replace-fail \
-          'server.log.info("Server is listening on http://0.0.0.0:3001")' \
-          'server.log.info("Server is listening on http://" + (process.env.HOST || "0.0.0.0") + ":" + (process.env.PORT || "3001"))'
+          'server.log.info(`Server is listening on http://0.0.0.0:3001 (PID: ''${process.pid})`)' \
+          'server.log.info(`Server is listening on http://''${process.env.HOST || "0.0.0.0"}:''${process.env.PORT || "3001"} (PID: ''${process.pid})`)'
     '';
 
     installPhase = ''

@@ -1,13 +1,15 @@
-Read X-Forwarded-Host/Proto headers for correct redirect URLs behind proxy.
+Make proxy.ts redirects aware of reverse-proxy headers.
 
-In Next.js standalone mode, both request.url and request.nextUrl use the
-local listen address (e.g. http://localhost:3052) rather than the public
-domain. This adds a helper that reads X-Forwarded-Host (or Host) and
-X-Forwarded-Proto headers so redirects resolve to the correct origin
-when running behind a reverse proxy like Pangolin/Traefik.
+In Next.js 16 standalone mode, request.url reflects the local listen
+address rather than the public domain. This patches client/src/proxy.ts
+(the Next.js 16 replacement for middleware.ts) to read X-Forwarded-Host
+and X-Forwarded-Proto headers so OAuth callback, siteId, and private-key
+redirects resolve to the correct public origin when running behind a
+reverse proxy (Pangolin/Traefik/nginx).
 
---- a/src/middleware.ts
-+++ b/src/middleware.ts
+diff --git a/src/proxy.ts b/src/proxy.ts
+--- a/src/proxy.ts
++++ b/src/proxy.ts
 @@ -1,6 +1,19 @@
  import { NextResponse } from "next/server";
  import type { NextRequest } from "next/server";
@@ -25,7 +27,7 @@ when running behind a reverse proxy like Pangolin/Traefik.
 +  return new URL(pathname, request.url);
 +}
 +
- export async function middleware(request: NextRequest) {
+ export async function proxy(request: NextRequest) {
    const url = request.nextUrl.clone();
    const path = url.pathname;
 @@ -13,7 +26,7 @@
@@ -37,17 +39,19 @@ when running behind a reverse proxy like Pangolin/Traefik.
      response.headers.set("Cache-Control", "no-store, max-age=0");
      return response;
    }
-@@ -50,5 +63,5 @@
+@@ -48,7 +61,7 @@
+     }
+
      // Add cache control headers to make sure the redirect isn't cached
 -    const response = NextResponse.redirect(new URL(`/${siteId}/main`, request.url));
 +    const response = NextResponse.redirect(proxyRedirectUrl(request, `/${siteId}/main`));
      response.headers.set("Cache-Control", "no-store, max-age=0");
      return response;
    }
-@@ -61,7 +74,6 @@
+@@ -61,7 +74,7 @@
      const siteAndKey = privateKeyMatch[1]; // e.g., "123/abc123def456"
 
--    // Redirect to /main while preserving the private key in the path
+     // Redirect to /main while preserving the private key in the path
 -    const response = NextResponse.redirect(new URL(`/${siteAndKey}/main`, request.url));
 +    const response = NextResponse.redirect(proxyRedirectUrl(request, `/${siteAndKey}/main`));
      response.headers.set("Cache-Control", "no-store, max-age=0");

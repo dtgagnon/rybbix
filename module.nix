@@ -90,12 +90,23 @@ let
     </clickhouse>
   '';
 
-  # Drizzle config for postgres schema migration
+  # Committed migration files (generated via `drizzle-kit generate` against
+  # the upstream rybbit schema.js). Using `drizzle-kit migrate` against a
+  # pre-generated migration folder is deterministic and non-interactive,
+  # unlike `drizzle-kit push` which prompts for rename disambiguation and
+  # silently bails under systemd (no TTY), leaving the schema partially
+  # migrated. See ./drizzle/README.md for the upgrade workflow.
+  drizzleMigrations = ./drizzle;
+
+  # Drizzle config used by the migrate command. `out` points at the committed
+  # migration folder; `schema` is informational only for the migrate command
+  # but kept accurate for any future `drizzle-kit generate` invocations.
   drizzleConfig = pkgs.writeText "rybbit-drizzle.mjs" ''
     import { defineConfig } from "drizzle-kit";
     export default defineConfig({
       dialect: "postgresql",
       schema: "${cfg.package}/lib/rybbit-server/dist/db/postgres/schema.js",
+      out: "${drizzleMigrations}",
       dbCredentials: {
         host: "${cfg.postgres.host}",
         port: ${toString cfg.postgres.port},
@@ -110,7 +121,7 @@ let
     set -euo pipefail
     cd ${cfg.package}/lib/rybbit-server
     export NODE_PATH=${cfg.package}/lib/rybbit-server/node_modules
-    ${pkgs.nodejs_20}/bin/node ./node_modules/.bin/drizzle-kit push \
+    ${pkgs.nodejs_20}/bin/node ./node_modules/.bin/drizzle-kit migrate \
       --config ${drizzleConfig}
   '';
 in

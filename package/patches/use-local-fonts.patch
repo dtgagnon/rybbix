@@ -1,7 +1,33 @@
+diff --git a/src/app/[site]/main/components/MainSection/MainSection.tsx b/src/app/[site]/main/components/MainSection/MainSection.tsx
+index 3d80809..e86704f 100644
+--- a/src/app/[site]/main/components/MainSection/MainSection.tsx
++++ b/src/app/[site]/main/components/MainSection/MainSection.tsx
+@@ -1,7 +1,7 @@
+ "use client";
+ import { Card, CardContent, CardLoader } from "@/components/ui/card";
+ import { DateTime } from "luxon";
+-import { Tilt_Warp } from "next/font/google";
++import localFont from "next/font/local";
+ import { useExtracted } from "next-intl";
+ import Link from "next/link";
+ import { useGetOverview } from "../../../../../api/analytics/hooks/useGetOverview";
+@@ -16,10 +16,7 @@ import { Overview } from "./Overview";
+ 
+ // Moved inside component to use static t() calls
+ 
+-const tilt_wrap = Tilt_Warp({
+-  subsets: ["latin"],
+-  weight: "400",
+-});
++const tilt_wrap = localFont({ src: '../../../../../app/fonts/Inter.ttf' });
+ 
+ export function MainSection() {
+   const { isWhiteLabel } = useWhiteLabel();
 diff --git a/src/app/layout.tsx b/src/app/layout.tsx
+index 421c6f7..d05a5ea 100644
 --- a/src/app/layout.tsx
 +++ b/src/app/layout.tsx
-@@ -1,8 +1,8 @@
+@@ -1,11 +1,11 @@
 -import { Inter } from "next/font/google";
 +import localFont from "next/font/local";
  import { getLocale, getMessages } from "next-intl/server";
@@ -9,52 +35,9 @@ diff --git a/src/app/layout.tsx b/src/app/layout.tsx
  import { cn } from "../lib/utils";
  import "./globals.css";
  import { Providers } from "./Providers";
-
+ 
 -const inter = Inter({ subsets: ["latin"] });
 +const inter = localFont({ src: './fonts/Inter.ttf' });
-diff --git a/src/app/[site]/main/components/MainSection/MainSection.tsx b/src/app/[site]/main/components/MainSection/MainSection.tsx
---- a/src/app/[site]/main/components/MainSection/MainSection.tsx
-+++ b/src/app/[site]/main/components/MainSection/MainSection.tsx
-@@ -1,5 +1,5 @@
- "use client";
- import { Card, CardContent, CardLoader } from "@/components/ui/card";
--import { Tilt_Warp } from "next/font/google";
-+import localFont from "next/font/local";
- import { useExtracted } from "next-intl";
- import Link from "next/link";
-@@ -16,10 +16,7 @@
-
- // Moved inside component to use static t() calls
-
--const tilt_wrap = Tilt_Warp({
--  subsets: ["latin"],
--  weight: "400",
--});
-+const tilt_wrap = localFont({ src: '../../../../../app/fonts/Inter.ttf' });
-
- export function MainSection() {
-   const { isWhiteLabel } = useWhiteLabel();
-diff --git a/src/app/[site]/performance/components/PerformanceChart.tsx b/src/app/[site]/performance/components/PerformanceChart.tsx
---- a/src/app/[site]/performance/components/PerformanceChart.tsx
-+++ b/src/app/[site]/performance/components/PerformanceChart.tsx
-@@ -6,7 +6,7 @@
- import { useNivoTheme } from "@/lib/nivo";
- import { ResponsiveLine } from "@nivo/line";
- import { DateTime } from "luxon";
--import { Tilt_Warp } from "next/font/google";
-+import localFont from "next/font/local";
- import Link from "next/link";
- import { useState } from "react";
- import { useGetPerformanceTimeSeries } from "../../../../api/analytics/hooks/performance/useGetPerformanceTimeSeries";
-@@ -21,10 +21,7 @@
- import { ChartTooltip } from "../../../../components/charts/ChartTooltip";
- import { useWhiteLabel } from "../../../../hooks/useIsWhiteLabel";
-
--const tilt_wrap = Tilt_Warp({
--  subsets: ["latin"],
--  weight: "400",
--});
-+const tilt_wrap = localFont({ src: '../../../../app/fonts/Inter.ttf' });
-
- export function PerformanceChart() {
-   const t = useExtracted();
+ 
+ export default async function RootLayout({ children }: { children: React.ReactNode }) {
+   const locale = await getLocale();

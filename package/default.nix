@@ -17,14 +17,14 @@
 
 let
   # Version info - updated by GitHub Actions on new releases
-  version = "2.6.0";
-  rev = "8a7cb524e5b3048f346aa74fd0ceb06eb8c75a4f";
-  hash = "sha256-7AUUWOOu+6PLg/fy4UCNLCB2F+QtWthp+FnvPq98DsA=";
+  version = "2.7.0";
+  rev = "17392d73df4e9aa19a2486446921cfd307041dec";
+  hash = "sha256-JRCkJhNDtfLBCKkFhVg5pFvfod12J7QRYO3Gv6JCGjg=";
 
   # npm dependency hashes - updated by GitHub Actions
   sharedHash = "sha256-AtGuK17i1yH4QFl/D7svtnQjHvxV81FKxFsZ9CWUbvo=";
-  clientHash = "sha256-95WMKSm0JPd1rmhqCMYZ+CZUQNro5vKbBxulx2mVf3U=";
-  serverHash = "sha256-rs9V1NaRNKtSAlIUjQBImAvIH0hXnM+gU2bloYwUANw=";
+  clientHash = "sha256-e3hHfTq77XNi5J90H2IhQtyC2Kl822Opyf2l438rB4E=";
+  serverHash = "sha256-0hRXtmNmUGPwnlqUDBxlkv8kzIzN0Lof6/n9pSA27XA=";
 
   # Fetch source from GitHub
   src = fetchFromGitHub {
@@ -36,7 +36,7 @@ let
   # Shared types package
   shared = buildNpmPackage {
     pname = "rybbit-shared";
-    version = "2.6.0";
+    version = "2.7.0";
 
     inherit src;
     sourceRoot = "${src.name}/shared";

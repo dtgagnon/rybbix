@@ -8,12 +8,13 @@ redirects resolve to the correct public origin when running behind a
 reverse proxy (Pangolin/Traefik/nginx).
 
 diff --git a/src/proxy.ts b/src/proxy.ts
+index 751e79d..6d0f191 100644
 --- a/src/proxy.ts
 +++ b/src/proxy.ts
 @@ -1,6 +1,19 @@
  import { NextResponse } from "next/server";
  import type { NextRequest } from "next/server";
-
+ 
 +/**
 + * Build a redirect URL that respects reverse-proxy headers.
 + * In standalone mode request.url uses the local listen address;
@@ -30,7 +31,8 @@ diff --git a/src/proxy.ts b/src/proxy.ts
  export async function proxy(request: NextRequest) {
    const url = request.nextUrl.clone();
    const path = url.pathname;
-@@ -13,7 +26,7 @@
+@@ -12,7 +25,7 @@ export async function proxy(request: NextRequest) {
+ 
    // Handle GitHub OAuth callback redirect
    if (path.includes("/auth/callback/github") || path.includes("/auth/callback/google")) {
 -    const redirectUrl = new URL(`/api${path}${request.nextUrl.search}`, request.url);
@@ -38,21 +40,22 @@ diff --git a/src/proxy.ts b/src/proxy.ts
      const response = NextResponse.redirect(redirectUrl);
      response.headers.set("Cache-Control", "no-store, max-age=0");
      return response;
-   }
-@@ -48,7 +61,7 @@
+@@ -50,8 +63,7 @@ export async function proxy(request: NextRequest) {
      }
-
+ 
      // Add cache control headers to make sure the redirect isn't cached
--    const response = NextResponse.redirect(new URL(`/${siteId}/main`, request.url));
+-    url.pathname = `/${siteId}/main`;
+-    const response = NextResponse.redirect(url);
 +    const response = NextResponse.redirect(proxyRedirectUrl(request, `/${siteId}/main`));
      response.headers.set("Cache-Control", "no-store, max-age=0");
      return response;
    }
-@@ -61,7 +74,7 @@
+@@ -64,8 +76,7 @@ export async function proxy(request: NextRequest) {
      const siteAndKey = privateKeyMatch[1]; // e.g., "123/abc123def456"
-
+ 
      // Redirect to /main while preserving the private key in the path
--    const response = NextResponse.redirect(new URL(`/${siteAndKey}/main`, request.url));
+-    url.pathname = `/${siteAndKey}/main`;
+-    const response = NextResponse.redirect(url);
 +    const response = NextResponse.redirect(proxyRedirectUrl(request, `/${siteAndKey}/main`));
      response.headers.set("Cache-Control", "no-store, max-age=0");
      return response;

@@ -3,7 +3,7 @@
   fetchFromGitHub,
   buildNpmPackage,
   runCommand,
-  nodejs_20,
+  nodejs_24,
   makeWrapper,
   chromium,
   postgresql,
@@ -76,7 +76,7 @@ let
     ];
 
     npmDepsHash = clientHash;
-    nodejs = nodejs_20;
+    nodejs = nodejs_24;
     npmFlags = [
       "--legacy-peer-deps"
     ];
@@ -127,7 +127,7 @@ let
     sourceRoot = "${src.name}/server";
 
     npmDepsHash = serverHash;
-    nodejs = nodejs_20;
+    nodejs = nodejs_24;
     nativeBuildInputs = [
       makeWrapper
       python3
@@ -155,7 +155,7 @@ let
       substituteInPlace binding.gyp \
         --replace-fail "'<(module_root_dir)/deps/zstd/out/lib/libzstd.a'" "'-lzstd'" \
         --replace-fail '"<(module_root_dir)/deps/zstd/lib"' '"${zstd.dev}/include"'
-      HOME=$TMPDIR node ${nodejs_20}/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js rebuild
+      HOME=$TMPDIR node ${nodejs_24}/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js rebuild
       popd
     '';
 
@@ -192,7 +192,7 @@ let
       rm -f $out/lib/rybbit-server/node_modules/@rybbit/shared
       ln -s $out/lib/shared $out/lib/rybbit-server/node_modules/@rybbit/shared
 
-      makeWrapper ${nodejs_20}/bin/node $out/bin/rybbit-server \
+      makeWrapper ${nodejs_24}/bin/node $out/bin/rybbit-server \
         --add-flags "$out/lib/rybbit-server/dist/index.js" \
         --set-default PUPPETEER_EXECUTABLE_PATH "${chromium}/bin/chromium" \
         --set-default PUPPETEER_SKIP_CHROMIUM_DOWNLOAD "1" \
@@ -231,7 +231,7 @@ in
     cp -r ${server}/lib/* $out/lib/
 
     # Create server wrapper (use --set-default so module environment takes precedence)
-    makeWrapper ${nodejs_20}/bin/node $out/bin/rybbit-server \
+    makeWrapper ${nodejs_24}/bin/node $out/bin/rybbit-server \
       --add-flags "$out/lib/rybbit-server/dist/index.js" \
       --set-default PUPPETEER_EXECUTABLE_PATH "${chromium}/bin/chromium" \
       --set-default PUPPETEER_SKIP_CHROMIUM_DOWNLOAD "1" \
@@ -239,7 +239,7 @@ in
 
     # Create client wrapper (use --set-default so module environment takes precedence)
     # --chdir ensures Next.js finds .next/ relative to server.js
-    makeWrapper ${nodejs_20}/bin/node $out/bin/rybbit-client \
+    makeWrapper ${nodejs_24}/bin/node $out/bin/rybbit-client \
       --add-flags "$out/lib/client/server.js" \
       --chdir "$out/lib/client" \
       --set-default PORT "3002" \

@@ -124,7 +124,7 @@
 
               cd "${server}/lib/rybbit-server"
               export NODE_PATH="${server}/lib/rybbit-server/node_modules"
-              "${pkgs.nodejs_20}/bin/node" ./node_modules/.bin/drizzle-kit generate \
+              "${pkgs.nodejs_24}/bin/node" ./node_modules/.bin/drizzle-kit generate \
                 --config "$TMPCONFIG" --name "$NAME"
 
               echo

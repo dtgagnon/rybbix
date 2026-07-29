@@ -3,7 +3,7 @@
 pkgs.mkShell {
   packages = with pkgs; [
     # Node.js runtime
-    nodejs_20
+    nodejs_24
 
     # Database clients
     postgresql_16

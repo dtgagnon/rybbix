@@ -121,7 +121,7 @@ let
     set -euo pipefail
     cd ${cfg.package}/lib/rybbit-server
     export NODE_PATH=${cfg.package}/lib/rybbit-server/node_modules
-    ${pkgs.nodejs_20}/bin/node ./node_modules/.bin/drizzle-kit migrate \
+    ${pkgs.nodejs_24}/bin/node ./node_modules/.bin/drizzle-kit migrate \
       --config ${drizzleConfig}
   '';
 in
